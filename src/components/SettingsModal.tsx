@@ -87,6 +87,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     enabled: boolean;
     subscribers: number;
     views24h: number;
+    totalViews?: number;
+    totalVideos?: number;
   }>({
     platform: 'youtube',
     name: '',
@@ -98,6 +100,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     enabled: true,
     subscribers: 0,
     views24h: 100,
+    totalViews: 0,
+    totalVideos: 0,
   });
 
   const [detectingChannel, setDetectingChannel] = useState(false);
@@ -257,14 +261,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  // Auto-detectar canal de YouTube con la API
+  // Auto-detectar canal de YouTube (usa la clave del sistema o extracción pública sin que el usuario configure nada)
   const handleDetectYouTubeChannel = async () => {
     if (!accountForm.channelId && !accountForm.handle) {
-      setDetectMsg('Ingresa un Channel ID (UC...) o un @Handle para detectarlo');
-      return;
-    }
-    if (!youtubeApiKey) {
-      setDetectMsg('Primero ingresa tu YouTube API Key en la pestaña "Claves API"');
+      setDetectMsg('Ingresa un @Handle, enlace de YouTube o Channel ID (UC...)');
       return;
     }
 
@@ -277,7 +277,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'youtube',
-          youtubeApiKey,
+          youtubeApiKey: youtubeApiKey || undefined,
           channelQuery: query,
         }),
       });
@@ -288,8 +288,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           channelId: data.channel.channelId,
           name: data.channel.name,
           handle: data.channel.handle,
-          avatarUrl: data.channel.avatarUrl,
-          subscribers: data.channel.subscribers,
+          avatarUrl: data.channel.avatarUrl || prev.avatarUrl,
+          subscribers: data.channel.subscribers || prev.subscribers,
+          totalViews: data.channel.totalViews || prev.totalViews,
+          totalVideos: data.channel.totalVideos || prev.totalVideos,
         }));
         setDetectMsg(`✅ ¡Encontrado! "${data.channel.name}"`);
       } else {
@@ -316,6 +318,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       enabled: true,
       subscribers: 0,
       views24h: 150,
+      totalViews: 0,
+      totalVideos: 0,
     });
     setDetectMsg(null);
     setIsAddingAccount(true);
@@ -335,6 +339,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       enabled: acc.enabled !== false,
       subscribers: acc.subscribers || 0,
       views24h: acc.views24h || 100,
+      totalViews: acc.totalViews || 0,
+      totalVideos: acc.totalVideos || 0,
     });
     setDetectMsg(null);
     setIsAddingAccount(true);
@@ -802,34 +808,50 @@ CREATE TABLE IF NOT EXISTS content_items (
                   {/* Si es YouTube: detección automática */}
                   {accountForm.platform === 'youtube' && (
                     <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 space-y-2">
-                      <label className="block font-semibold text-zinc-300">
-                        Channel ID de YouTube o @Handle (ej. UCI4ufWjJ_w-TqW_GyuRLkgg o @mundoanitoonia)
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="block font-semibold text-zinc-300">
+                          Enlace de YouTube, @Handle o Channel ID (UC...)
+                        </label>
+                        <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full font-semibold">
+                          Sin API Key requerida
+                        </span>
+                      </div>
                       <div className="flex gap-2">
                         <input
                           type="text"
-                          value={accountForm.channelId}
-                          onChange={(e) => setAccountForm((p) => ({ ...p, channelId: e.target.value }))}
-                          placeholder="UCxxxxxxxxx o @handle"
+                          value={accountForm.channelId || accountForm.handle}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setAccountForm((p) => ({
+                              ...p,
+                              channelId: val.startsWith('UC') ? val : (val.includes('youtube.com') ? val : p.channelId),
+                              handle: val.startsWith('@') ? val : p.handle,
+                            }));
+                          }}
+                          placeholder="Pega el enlace https://youtube.com/@micanal o escribe @mundoanitoonia"
                           className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-rose-500"
                         />
                         <button
                           type="button"
                           onClick={handleDetectYouTubeChannel}
                           disabled={detectingChannel}
-                          className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                          className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
                         >
                           {detectingChannel ? (
                             <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                           ) : (
                             <Search className="h-3.5 w-3.5" />
                           )}
-                          <span>Detectar</span>
+                          <span>Auto-Detectar</span>
                         </button>
                       </div>
-                      {detectMsg && (
+                      {detectMsg ? (
                         <p className={`text-[11px] ${detectMsg.includes('✅') ? 'text-emerald-400' : 'text-amber-400'}`}>
                           {detectMsg}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-zinc-500">
+                          Solo pega el @usuario o link de YouTube y presiona <strong>Auto-Detectar</strong>. Descargará el nombre, foto, suscriptores y videos automáticamente.
                         </p>
                       )}
                     </div>

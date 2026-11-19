@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAppSettings } from '@/lib/settings';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
@@ -59,15 +62,18 @@ export async function POST(req: Request) {
 
     // 2. Probar API Key de YouTube o buscar información de un canal
     if (type === 'youtube') {
-      if (!youtubeApiKey) {
-        return NextResponse.json({
-          success: false,
-          message: 'Debes ingresar una clave API de YouTube',
-        }, { status: 400 });
-      }
+      const serverSettings = getAppSettings();
+      const effectiveApiKey = (youtubeApiKey && youtubeApiKey.trim()) || serverSettings.youtube?.apiKey || process.env.YOUTUBE_API_KEY || '';
 
       if (!channelQuery) {
-        const testUrl = `https://www.googleapis.com/youtube/v3/videos?part=id&chart=mostPopular&maxResults=1&key=${youtubeApiKey}`;
+        if (!effectiveApiKey) {
+          return NextResponse.json({
+            success: false,
+            message: 'No hay una clave API de YouTube configurada en el servidor ni ingresada en la prueba',
+          }, { status: 400 });
+        }
+
+        const testUrl = `https://www.googleapis.com/youtube/v3/videos?part=id&chart=mostPopular&maxResults=1&key=${effectiveApiKey}`;
         const res = await fetch(testUrl);
         const data = await res.json();
 
@@ -84,51 +90,95 @@ export async function POST(req: Request) {
         });
       }
 
-      const query = channelQuery.trim();
-      let fetchUrl = '';
-
-      if (query.startsWith('UC') && query.length >= 20) {
-        fetchUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${query}&key=${youtubeApiKey}`;
-      } else {
-        const cleanHandle = query.replace(/^@/, '');
-        fetchUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&forHandle=${cleanHandle}&key=${youtubeApiKey}`;
+      // Si se envió un canal a consultar
+      let rawQuery = String(channelQuery).trim();
+      // Extraer handle si pegaron una URL completa de youtube (ej. https://youtube.com/@mundoanitoonia)
+      const urlHandleMatch = rawQuery.match(/(?:youtube\.com\/(?:@|channel\/|c\/)?)([\w\-]+)/i);
+      if (urlHandleMatch) {
+        rawQuery = urlHandleMatch[1];
       }
+      const query = rawQuery;
 
-      let res = await fetch(fetchUrl);
-      let data = await res.json();
+      if (effectiveApiKey) {
+        let fetchUrl = '';
+        if (query.startsWith('UC') && query.length >= 20) {
+          fetchUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${query}&key=${effectiveApiKey}`;
+        } else {
+          const cleanHandle = query.replace(/^@/, '');
+          fetchUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&forHandle=${cleanHandle}&key=${effectiveApiKey}`;
+        }
 
-      if (!data.items || data.items.length === 0) {
-        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&maxResults=1&key=${youtubeApiKey}`;
-        const sRes = await fetch(searchUrl);
-        const sData = await sRes.json();
+        let res = await fetch(fetchUrl);
+        let data = await res.json();
 
-        if (sData.items && sData.items.length > 0) {
-          const chId = sData.items[0].snippet.channelId;
-          const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${chId}&key=${youtubeApiKey}`);
-          data = await chRes.json();
+        if (!data.items || data.items.length === 0) {
+          const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&maxResults=1&key=${effectiveApiKey}`;
+          const sRes = await fetch(searchUrl);
+          const sData = await sRes.json();
+
+          if (sData.items && sData.items.length > 0) {
+            const chId = sData.items[0].snippet?.channelId || sData.items[0].id?.channelId;
+            if (chId) {
+              const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${chId}&key=${effectiveApiKey}`);
+              data = await chRes.json();
+            }
+          }
+        }
+
+        if (data.items && data.items.length > 0) {
+          const item = data.items[0];
+          return NextResponse.json({
+            success: true,
+            channel: {
+              channelId: item.id,
+              name: item.snippet.title,
+              handle: item.snippet.customUrl ? (item.snippet.customUrl.startsWith('@') ? item.snippet.customUrl : `@${item.snippet.customUrl}`) : `@${query.replace(/^@/, '')}`,
+              avatarUrl: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
+              subscribers: parseInt(item.statistics.subscriberCount || '0', 10),
+              totalViews: parseInt(item.statistics.viewCount || '0', 10),
+              totalVideos: parseInt(item.statistics.videoCount || '0', 10),
+            },
+            message: `Canal "${item.snippet.title}" detectado con éxito`,
+          });
         }
       }
 
-      if (!data.items || data.items.length === 0) {
-        return NextResponse.json({
-          success: false,
-          message: `No se encontró ningún canal para "${query}". Verifica el ID o Handle.`,
+      // Fallback público sin API Key (extracción directa de metadatos del canal en YouTube)
+      try {
+        const cleanHandle = query.replace(/^@/, '');
+        const targetUrl = query.startsWith('UC') ? `https://www.youtube.com/channel/${query}` : `https://www.youtube.com/@${cleanHandle}`;
+        const ytHtmlRes = await fetch(targetUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
         });
+        if (ytHtmlRes.ok) {
+          const html = await ytHtmlRes.text();
+          const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/);
+          const imageMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
+          const chIdMatch = html.match(/<meta itemprop="channelId" content="([^"]+)"/) || html.match(/"channelId":"(UC[^"]+)"/);
+
+          if (titleMatch && titleMatch[1]) {
+            return NextResponse.json({
+              success: true,
+              channel: {
+                channelId: chIdMatch ? chIdMatch[1] : (query.startsWith('UC') ? query : `yt_${Date.now()}`),
+                name: titleMatch[1],
+                handle: query.startsWith('@') ? query : `@${cleanHandle}`,
+                avatarUrl: imageMatch ? imageMatch[1] : '',
+                subscribers: 0,
+                totalViews: 0,
+                totalVideos: 0,
+              },
+              message: `Canal "${titleMatch[1]}" detectado públicamente sin necesidad de API Key.`,
+            });
+          }
+        }
+      } catch (scrapErr) {
+        console.warn('Fallback de extracción pública de YouTube:', scrapErr);
       }
 
-      const item = data.items[0];
       return NextResponse.json({
-        success: true,
-        channel: {
-          channelId: item.id,
-          name: item.snippet.title,
-          handle: item.snippet.customUrl || `@${item.snippet.title.toLowerCase().replace(/\s+/g, '')}`,
-          avatarUrl: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
-          subscribers: parseInt(item.statistics.subscriberCount || '0', 10),
-          totalViews: parseInt(item.statistics.viewCount || '0', 10),
-          totalVideos: parseInt(item.statistics.videoCount || '0', 10),
-        },
-        message: `Canal "${item.snippet.title}" encontrado con éxito`,
+        success: false,
+        message: `No se pudo encontrar el canal para "${query}". Verifica el handle o enlace.`,
       });
     }
 
