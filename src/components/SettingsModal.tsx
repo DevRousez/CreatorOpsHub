@@ -72,6 +72,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [ytStatus, setYtStatus] = useState<{ success: boolean; message: string } | null>(null);
   const [ttTesting, setTtTesting] = useState(false);
   const [ttStatus, setTtStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [connectingTikTok, setConnectingTikTok] = useState(false);
 
   // Estado para agregar/editar cuenta
   const [isAddingAccount, setIsAddingAccount] = useState(false);
@@ -165,8 +166,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setLoading(false);
     }
   };
-
-  if (!isOpen) return null;
 
   // Alternar activación/desactivación de una cuenta
   const handleToggleAccountEnabled = (id: string) => {
@@ -262,8 +261,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   // Conexión rápida OAuth de TikTok (envía las credenciales actuales para asegurar el canje del token)
-  const [connectingTikTok, setConnectingTikTok] = useState(false);
-
   const handleConnectTikTok = async () => {
     setConnectingTikTok(true);
     try {
@@ -537,6 +534,8 @@ CREATE TABLE IF NOT EXISTS content_items (
   };
 
   const activeAccountsCount = accounts.filter((a) => a.enabled !== false).length;
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
