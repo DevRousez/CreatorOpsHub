@@ -118,21 +118,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     try {
       const res = await fetch('/api/settings');
       const data = await res.json();
+      
+      // Respaldo de localStorage en cliente (máxima persistencia en entornos serverless)
+      let localBackup: any = null;
+      try {
+        const rawLocal = localStorage.getItem('creatorops_settings_backup');
+        if (rawLocal) localBackup = JSON.parse(rawLocal);
+      } catch {}
+
       if (data.success && data.settings) {
-        setUseMockData(data.settings.useMockData);
-        setSupabaseUrl(data.settings.supabase?.url || '');
-        setSupabaseAnonKey(data.settings.supabase?.anonKey || '');
-        setYoutubeApiKey(data.settings.youtube?.apiKey || '');
-        setTiktokMonitoredHandles(data.settings.tiktok?.monitoredHandles || '');
-        setTiktokClientKey(data.settings.tiktok?.clientKey || '');
-        setTiktokClientSecret(data.settings.tiktok?.clientSecret || '');
-        setTiktokAccessToken(data.settings.tiktok?.accessToken || '');
+        const s = data.settings;
+        setUseMockData(s.useMockData ?? localBackup?.useMockData ?? false);
+        setSupabaseUrl(s.supabase?.url || localBackup?.supabase?.url || '');
+        setSupabaseAnonKey(s.supabase?.anonKey || localBackup?.supabase?.anonKey || '');
+        setYoutubeApiKey(s.youtube?.apiKey || localBackup?.youtube?.apiKey || '');
+        setTiktokMonitoredHandles(s.tiktok?.monitoredHandles || localBackup?.tiktok?.monitoredHandles || 'mundoanitoonia,pequemundotoon5');
+        setTiktokClientKey(s.tiktok?.clientKey || localBackup?.tiktok?.clientKey || '');
+        setTiktokClientSecret(s.tiktok?.clientSecret || localBackup?.tiktok?.clientSecret || '');
+        setTiktokAccessToken(s.tiktok?.accessToken || localBackup?.tiktok?.accessToken || '');
         setAccounts(
-          (data.settings.accounts || []).map((acc: any) => ({
+          (s.accounts || localBackup?.accounts || []).map((acc: any) => ({
             ...acc,
             enabled: acc.enabled !== false,
           }))
         );
+      } else if (localBackup) {
+        setUseMockData(localBackup.useMockData ?? false);
+        setSupabaseUrl(localBackup.supabase?.url || '');
+        setSupabaseAnonKey(localBackup.supabase?.anonKey || '');
+        setYoutubeApiKey(localBackup.youtube?.apiKey || '');
+        setTiktokMonitoredHandles(localBackup.tiktok?.monitoredHandles || 'mundoanitoonia,pequemundotoon5');
+        setTiktokClientKey(localBackup.tiktok?.clientKey || '');
+        setTiktokClientSecret(localBackup.tiktok?.clientSecret || '');
+        setTiktokAccessToken(localBackup.tiktok?.accessToken || '');
+        if (Array.isArray(localBackup.accounts)) {
+          setAccounts(localBackup.accounts);
+        }
       }
     } catch (err: any) {
       setErrorMsg('No se pudieron cargar las configuraciones');
@@ -389,6 +410,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     };
 
     try {
+      // Respaldo inmediato en el navegador del usuario
+      try {
+        localStorage.setItem('creatorops_settings_backup', JSON.stringify(payload));
+      } catch {}
+
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

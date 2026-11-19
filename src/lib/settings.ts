@@ -6,44 +6,73 @@ export type { ConfigAccount, AppSettings };
 export { DEFAULT_ACCOUNTS };
 
 const SETTINGS_FILE_PATH = path.join(process.cwd(), 'data', 'settings.json');
-const ENV_FILE_PATH = path.join(process.cwd(), '.env.local');
+const TMP_SETTINGS_FILE_PATH = path.join('/tmp', 'creatorops_settings.json');
+
+// Caché en memoria para entornos serverless (Vercel / Lambda)
+let inMemorySettings: AppSettings | null = null;
+
+function normalizeSettings(parsed: any): AppSettings {
+  return {
+    useMockData: parsed.useMockData ?? false,
+    supabase: {
+      url: parsed.supabase?.url || process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      anonKey: parsed.supabase?.anonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    },
+    youtube: {
+      apiKey: parsed.youtube?.apiKey || process.env.YOUTUBE_API_KEY || '',
+    },
+    tiktok: {
+      monitoredHandles: parsed.tiktok?.monitoredHandles || process.env.TIKTOK_MONITORED_HANDLES || 'mundoanitoonia,pequemundotoon5',
+      clientKey: parsed.tiktok?.clientKey || process.env.TIKTOK_CLIENT_KEY || '',
+      clientSecret: parsed.tiktok?.clientSecret || process.env.TIKTOK_CLIENT_SECRET || '',
+      accessToken: parsed.tiktok?.accessToken || '',
+    },
+    accounts: Array.isArray(parsed.accounts) && parsed.accounts.length > 0
+      ? parsed.accounts.map((acc: any) => ({
+          ...acc,
+          enabled: acc.enabled !== false,
+        }))
+      : DEFAULT_ACCOUNTS,
+  };
+}
 
 /**
- * Carga la configuración actual desde settings.json o .env.local
+ * Carga la configuración actual desde memoria, /tmp, data/settings.json o .env.local
  */
 export function getAppSettings(): AppSettings {
+  if (inMemorySettings) {
+    return inMemorySettings;
+  }
+
+  // 1. Probar en /tmp (persistencia en serverless durante vida de la función)
+  try {
+    if (fs.existsSync(TMP_SETTINGS_FILE_PATH)) {
+      const raw = fs.readFileSync(TMP_SETTINGS_FILE_PATH, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed) {
+        inMemorySettings = normalizeSettings(parsed);
+        return inMemorySettings;
+      }
+    }
+  } catch {
+    // Continuar al archivo local
+  }
+
+  // 2. Probar en data/settings.json
   try {
     if (fs.existsSync(SETTINGS_FILE_PATH)) {
       const raw = fs.readFileSync(SETTINGS_FILE_PATH, 'utf-8');
       const parsed = JSON.parse(raw);
-      return {
-        useMockData: parsed.useMockData ?? false,
-        supabase: {
-          url: parsed.supabase?.url || process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-          anonKey: parsed.supabase?.anonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-        },
-        youtube: {
-          apiKey: parsed.youtube?.apiKey || process.env.YOUTUBE_API_KEY || '',
-        },
-        tiktok: {
-          monitoredHandles: parsed.tiktok?.monitoredHandles || process.env.TIKTOK_MONITORED_HANDLES || '',
-          clientKey: parsed.tiktok?.clientKey || process.env.TIKTOK_CLIENT_KEY || '',
-          clientSecret: parsed.tiktok?.clientSecret || process.env.TIKTOK_CLIENT_SECRET || '',
-          accessToken: parsed.tiktok?.accessToken || '',
-        },
-        accounts: Array.isArray(parsed.accounts) && parsed.accounts.length > 0
-          ? parsed.accounts.map((acc: any) => ({
-              ...acc,
-              enabled: acc.enabled !== false, // Por defecto true si no está definido
-            }))
-          : DEFAULT_ACCOUNTS,
-      };
+      if (parsed) {
+        inMemorySettings = normalizeSettings(parsed);
+        return inMemorySettings;
+      }
     }
   } catch (error) {
     console.error('Error al leer settings.json:', error);
   }
 
-  // Fallback con variables de entorno
+  // 3. Fallback con variables de entorno
   const envUseMock = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
   const defaultSettings: AppSettings = {
     useMockData: envUseMock,
@@ -63,21 +92,12 @@ export function getAppSettings(): AppSettings {
     accounts: DEFAULT_ACCOUNTS,
   };
 
-  try {
-    const dir = path.dirname(SETTINGS_FILE_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(defaultSettings, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('No se pudo guardar la configuración inicial:', err);
-  }
-
+  inMemorySettings = defaultSettings;
   return defaultSettings;
 }
 
 /**
- * Guarda la configuración en data/settings.json y sincroniza .env.local
+ * Guarda la configuración tanto en disco como en memoria y /tmp (tolerante a entornos serverless como Vercel)
  */
 export function saveAppSettings(newSettings: Partial<AppSettings>): AppSettings {
   const current = getAppSettings();
@@ -104,19 +124,36 @@ export function saveAppSettings(newSettings: Partial<AppSettings>): AppSettings 
       : current.accounts,
   };
 
+  // 1. Guardar en memoria de inmediato
+  inMemorySettings = updated;
+
+  // 2. Intentar guardar en data/settings.json (entorno local con permisos de escritura)
+  let savedToDisk = false;
   try {
     const dir = path.dirname(SETTINGS_FILE_PATH);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(updated, null, 2), 'utf-8');
-  } catch (error) {
-    console.error('Error al guardar settings.json:', error);
-    throw new Error('No se pudo guardar la configuración en disco');
+    savedToDisk = true;
+  } catch (fsError) {
+    // En Vercel Serverless el sistema de archivos de la app es de solo lectura (EROFS).
+    // Guardamos en /tmp donde las funciones serverless sí tienen permiso de escritura.
+    try {
+      const tmpDir = path.dirname(TMP_SETTINGS_FILE_PATH);
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+      fs.writeFileSync(TMP_SETTINGS_FILE_PATH, JSON.stringify(updated, null, 2), 'utf-8');
+      savedToDisk = true;
+    } catch (tmpError) {
+      console.warn('Aviso: no se pudo escribir en /tmp:', tmpError);
+    }
   }
 
-  // Sincronizar con .env.local para que los procesos de Next.js y scripts lo tengan siempre disponible
+  // 3. Sincronizar con .env.local si el entorno lo permite
   try {
+    const ENV_FILE_PATH = path.join(process.cwd(), '.env.local');
     let envContent = '';
     if (fs.existsSync(ENV_FILE_PATH)) {
       envContent = fs.readFileSync(ENV_FILE_PATH, 'utf-8');
@@ -143,16 +180,16 @@ export function saveAppSettings(newSettings: Partial<AppSettings>): AppSettings 
     if (updated.tiktok.monitoredHandles) {
       envContent = setEnvVar(envContent, 'TIKTOK_MONITORED_HANDLES', updated.tiktok.monitoredHandles);
     }
-    if (updated.tiktok.clientKey !== undefined) {
+    if (updated.tiktok.clientKey) {
       envContent = setEnvVar(envContent, 'TIKTOK_CLIENT_KEY', updated.tiktok.clientKey);
     }
-    if (updated.tiktok.clientSecret !== undefined) {
+    if (updated.tiktok.clientSecret) {
       envContent = setEnvVar(envContent, 'TIKTOK_CLIENT_SECRET', updated.tiktok.clientSecret);
     }
 
     fs.writeFileSync(ENV_FILE_PATH, envContent.trim() + '\n', 'utf-8');
-  } catch (error) {
-    console.warn('Aviso: no se pudo escribir en .env.local, pero settings.json está actualizado:', error);
+  } catch {
+    // En entornos de solo lectura como Vercel esto se ignora limpiamente
   }
 
   return updated;
