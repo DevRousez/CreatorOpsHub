@@ -108,6 +108,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [detectingChannel, setDetectingChannel] = useState(false);
   const [detectMsg, setDetectMsg] = useState<string | null>(null);
   const [copiedSql, setCopiedSql] = useState(false);
+  const [copiedRedirectUri, setCopiedRedirectUri] = useState(false);
 
   // Cargar configuraciones al abrir el modal
   useEffect(() => {
@@ -533,7 +534,7 @@ CREATE TABLE IF NOT EXISTS content_items (
     setTimeout(() => setCopiedSql(false), 2500);
   };
 
-  const activeAccountsCount = accounts.filter((a) => a.enabled !== false).length;
+  const activeAccountsCount = (accounts || []).filter((a) => a && a.enabled !== false).length;
 
   if (!isOpen) return null;
 
@@ -1122,6 +1123,34 @@ CREATE TABLE IF NOT EXISTS content_items (
                     {connectingTikTok ? <RefreshCw className="h-4 w-4 animate-spin" /> : <TikTokIcon className="h-4 w-4 text-cyan-400" />}
                     <span>Conectar con TikTok</span>
                   </button>
+                </div>
+
+                {/* Configuración de Redirect URI para TikTok Login Kit */}
+                <div className="p-3 bg-zinc-950/80 rounded-xl border border-zinc-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-zinc-300">
+                      Redirect URI obligatoria en TikTok Developers (Login Kit)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://creator-ops-hub-xi.vercel.app';
+                        navigator.clipboard.writeText(`${origin}/api/auth/tiktok/callback`);
+                        setCopiedRedirectUri(true);
+                        setTimeout(() => setCopiedRedirectUri(false), 2500);
+                      }}
+                      className="px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-[11px] text-cyan-300 font-medium flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      {copiedRedirectUri ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      <span>{copiedRedirectUri ? 'Copiado' : 'Copiar URI'}</span>
+                    </button>
+                  </div>
+                  <div className="p-2 bg-black rounded-lg border border-zinc-800 font-mono text-[11px] text-cyan-400 break-all select-all">
+                    {typeof window !== 'undefined' ? `${window.location.origin}/api/auth/tiktok/callback` : 'https://creator-ops-hub-xi.vercel.app/api/auth/tiktok/callback'}
+                  </div>
+                  <p className="text-[11px] text-amber-300/90 leading-tight">
+                    ⚠️ <strong>Si TikTok te muestra &quot;client_key&quot; al iniciar sesión:</strong> En TikTok Developers ve a tu app &gt; <em>Login Kit</em> y pega esta URI exacta. Además, si la app está en modo desarrollo (Staging), ve a <em>App Details &gt; Test Accounts</em> y agrega tu usuario de TikTok.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

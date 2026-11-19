@@ -51,6 +51,12 @@ export default function DashboardPage() {
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      if (code) {
+        window.location.href = `/api/auth/tiktok/callback${window.location.search}`;
+        return;
+      }
+
       if (params.get('tiktok_connected') === 'true') {
         setAuthBanner({
           type: 'success',

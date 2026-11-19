@@ -21,6 +21,7 @@ export async function GET(req: Request) {
     };
     const cookieKey = getCookie('creatorops_tt_key');
     const cookieSecret = getCookie('creatorops_tt_secret');
+    const cookieRedirectUri = getCookie('creatorops_tt_redirect_uri');
 
     const settings = getAppSettings();
     const clientKey = cookieKey || settings.tiktok?.clientKey || process.env.TIKTOK_CLIENT_KEY || 'awo7pvamgk3831x0';
@@ -33,7 +34,7 @@ export async function GET(req: Request) {
 
     const host = req.headers.get('host') || url.host;
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const redirectUri = `${protocol}://${host}/api/auth/tiktok/callback`;
+    const redirectUri = cookieRedirectUri || `${protocol}://${host}/api/auth/tiktok/callback`;
 
     // Intercambiar código por Access Token en TikTok
     const tokenParams = new URLSearchParams();
