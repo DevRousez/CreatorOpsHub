@@ -3,7 +3,8 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 
 ## Estado actual
 - Desplegado y verificado en Vercel: `https://creator-ops-hub-xi.vercel.app/`
-- Flujo OAuth2 "Conectar con TikTok" de 1-clic activo (`/api/auth/tiktok/login` y `/api/auth/tiktok/callback`).
+- Botón "+ Conectar TikTok (1-Clic)" integrado en pestaña "1. Canales y Cuentas" con soporte multi-cuenta y tokens individuales por cuenta (`acc.accessToken`).
+- Flujo OAuth2 activo (`/api/auth/tiktok/login` y `/api/auth/tiktok/callback`).
 - Activación/desactivación de cuentas con switch Toggle sin borrarlas, enfocando el dashboard y las gráficas en canales activos.
 - Logo oficial en alta resolución (`/logo.jpg`), favicon y páginas de conformidad legal (`/terms` y `/privacy`).
 - 6/6 tests unitarios en verde (`node --test tests/metrics.test.js`) y tipado estricto sin errores.
