@@ -1,0 +1,35 @@
+{
+  "useMockData": true,
+  "supabase": {
+    "url": "https://tu-proyecto.supabase.co",
+    "anonKey": "tu-anon-key-aqui"
+  },
+  "youtube": {
+    "apiKey": "tu-youtube-api-key-aqui"
+  },
+  "tiktok": {
+    "monitoredHandles": "carlos.oficial,carlostechhacks",
+    "clientKey": "",
+    "clientSecret": "",
+    "accessToken": ""
+  },
+  "accounts": [
+    {
+      "id": "yt-1",
+      "platform": "youtube",
+      "name": "Canal Principal",
+      "handle": "@canalprincipal",
+      "channelId": "UCxxxxxxxxx",
+      "badge": "Principal",
+      "color": "#EF4444",
+      "avatarUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150",
+      "enabled": true,
+      "subscribers": 1000,
+      "subscribersChange24h": 5,
+      "totalViews": 25000,
+      "views24h": 300,
+      "totalVideos": 20,
+      "avgEngagementRate": 8.0
+    }
+  ]
+}
