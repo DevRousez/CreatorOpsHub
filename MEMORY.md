@@ -2,6 +2,7 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no aporte.
 
 ## Estado actual
+- PWA (Progressive Web App) completa y lista para instalar en Android e iOS con manifest, iconos de 192/512px, service worker y prompt nativo.
 - Desplegado y verificado en Vercel: `https://creator-ops-hub-xi.vercel.app/`
 - YouTube con auto-detección Zero-Friction: el usuario solo pega el @handle o enlace y el backend auto-completa nombre, foto, suscriptores y videos sin pedir API Key.
 - Botón "+ Conectar TikTok (1-Clic)" integrado en pestaña "1. Canales y Cuentas" con soporte multi-cuenta y tokens individuales por cuenta (`acc.accessToken`).
