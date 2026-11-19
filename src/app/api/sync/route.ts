@@ -167,6 +167,48 @@ export async function POST() {
           }, { onConflict: 'account_id,recorded_date' });
 
           await seedHistoricalMetricsIfNeeded(sbClient, savedTT.id, tt.subscribers || 100, tt.views24h || 80);
+
+          // Si el usuario proporcionó un Access Token de TikTok, consultar la lista de videos real
+          const ttAccessToken = settings.tiktok.accessToken || process.env.TIKTOK_ACCESS_TOKEN;
+          if (ttAccessToken) {
+            try {
+              const ttVideosUrl = 'https://open.tiktokapis.com/v2/video/list/?fields=id,title,video_description,duration,cover_image_url,share_url,view_count,like_count,comment_count,share_count';
+              const ttRes = await fetch(ttVideosUrl, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${ttAccessToken}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ max_count: 10 }),
+              });
+              const ttData = await ttRes.json();
+              if (ttData?.data?.videos && Array.isArray(ttData.data.videos)) {
+                for (const vid of ttData.data.videos) {
+                  const vViews = vid.view_count || 0;
+                  const vLikes = vid.like_count || 0;
+                  const vComments = vid.comment_count || 0;
+                  const vShares = vid.share_count || 0;
+
+                  await sbClient.from('content_items').upsert({
+                    account_id: savedTT.id,
+                    video_id: vid.id,
+                    title: vid.title || vid.video_description || 'Video de TikTok',
+                    url: vid.share_url || `https://www.tiktok.com/@${tt.handle.replace('@', '')}/video/${vid.id}`,
+                    thumbnail_url: vid.cover_image_url || tt.avatarUrl,
+                    published_at: new Date().toISOString(),
+                    views: vViews,
+                    likes: vLikes,
+                    comments: vComments,
+                    shares: vShares,
+                    type: 'short',
+                    performance_tag: vViews > 1000 ? 'viral' : vViews > 200 ? 'alto' : 'promedio',
+                  }, { onConflict: 'account_id,video_id' });
+                }
+              }
+            } catch (ttVidErr) {
+              console.error('Error sincronizando videos de TikTok desde Display API:', ttVidErr);
+            }
+          }
         }
       }
 
