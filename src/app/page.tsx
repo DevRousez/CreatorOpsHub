@@ -8,7 +8,7 @@ import { AnalyticsCharts } from '@/components/AnalyticsCharts';
 import { RecentContentFeed } from '@/components/RecentContentFeed';
 import { SettingsModal } from '@/components/SettingsModal';
 import { getDashboardData, DashboardData } from '@/lib/data-provider';
-import { Sun, ArrowRight, Settings } from 'lucide-react';
+import { Sun, ArrowRight, Settings, Smartphone } from 'lucide-react';
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [syncTimestamp, setSyncTimestamp] = useState<string>('Hace unos momentos');
   const [authBanner, setAuthBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   // Cargar datos
   const loadData = async (mock?: boolean) => {
@@ -31,6 +32,22 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
+
+    // Registro de Service Worker para PWA instalable
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch((err) => {
+          console.warn('PWA Service Worker registration:', err);
+        });
+      });
+    }
+
+    // Capturar evento de instalación de la app
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -48,7 +65,20 @@ export default function DashboardPage() {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
   }, []);
+
+  const handleInstallPWA = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   // Alternar entre modo ficticio y real
   const handleToggleMode = () => {
@@ -106,6 +136,35 @@ export default function DashboardPage() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 space-y-6">
         
+        {/* Banner Instalador PWA para Móvil */}
+        {deferredPrompt && (
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-rose-950/60 via-zinc-900 to-zinc-900 border border-rose-500/30 flex items-center justify-between gap-3 shadow-lg shadow-rose-950/20 animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20 shrink-0">
+                <Smartphone className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">Instalar CreatorOps Hub en tu teléfono</p>
+                <p className="text-[11px] text-zinc-400">Accede directamente desde tu pantalla de inicio en pantalla completa.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleInstallPWA}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+              >
+                Instalar App
+              </button>
+              <button
+                onClick={() => setDeferredPrompt(null)}
+                className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer text-xs"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Banner de Estado de Autenticación */}
         {authBanner && (
           <div
