@@ -490,8 +490,12 @@ CREATE TABLE IF NOT EXISTS content_items (
         {/* Cabecera del Panel */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-zinc-800 bg-zinc-900/40">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-rose-600 to-red-500 text-white flex items-center justify-center shadow-md shadow-rose-900/30">
-              <Sliders className="h-5 w-5" />
+            <div className="relative h-10 w-10 rounded-xl overflow-hidden shadow-md shadow-rose-900/30 ring-1 ring-zinc-700/80 bg-zinc-900 shrink-0">
+              <img
+                src="/logo.jpg"
+                alt="CreatorOps Hub"
+                className="h-full w-full object-cover object-center"
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">

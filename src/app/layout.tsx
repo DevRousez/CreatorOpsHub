@@ -4,6 +4,10 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'CreatorOps Hub - Panel de Control Multicuenta (YouTube & TikTok)',
   description: 'Monitorea las estadísticas en tiempo real de tus canales de YouTube y cuentas de TikTok en un solo lugar.',
+  icons: {
+    icon: '/logo.jpg',
+    apple: '/logo.jpg',
+  },
 };
 
 export default function RootLayout({

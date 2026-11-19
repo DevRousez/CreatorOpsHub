@@ -54,9 +54,18 @@ export default function DashboardPage() {
 
   if (loading && !data) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-zinc-400 gap-3">
-        <div className="h-10 w-10 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium">Iniciando CreatorOps Hub...</p>
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-zinc-400 gap-4">
+        <div className="relative h-16 w-16 rounded-2xl overflow-hidden shadow-2xl shadow-rose-900/40 ring-1 ring-zinc-700/80 bg-zinc-900 animate-pulse">
+          <img
+            src="/logo.jpg"
+            alt="CreatorOps Hub"
+            className="h-full w-full object-cover object-center"
+          />
+        </div>
+        <div className="flex items-center gap-2.5 text-sm font-medium text-zinc-300">
+          <div className="h-4 w-4 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+          <span>Iniciando CreatorOps Hub...</span>
+        </div>
       </div>
     );
   }

@@ -3,7 +3,8 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 
 ## Estado actual
 - v1.2 con SDD: Panel completo de TikTok for Developers (Client Key, Secret, Access Token con prueba de conexión).
-- Activación y desactivación (pausa) de cuentas individuales con switch Toggle sin borrarlas, enfocando el dashboard y las gráficas en los canales activos.
+- Activación/desactivación de cuentas individuales con switch Toggle sin borrarlas, enfocando el dashboard y las gráficas en los canales activos.
+- Logo oficial en alta resolución (`/logo.jpg`) integrado en Header, modal de configuración, pantalla de carga y favicon del navegador.
 - 6/6 tests unitarios en verde (`node --test tests/metrics.test.js`) y tipado estricto sin errores.
 
 ## Decisiones (y por qué)

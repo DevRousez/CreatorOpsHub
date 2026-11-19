@@ -33,10 +33,12 @@ export const Header: React.FC<HeaderProps> = ({
         
         {/* Logo y Titular */}
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-red-600 via-rose-500 to-cyan-400 p-[1.5px] shadow-lg shadow-red-500/10">
-            <div className="h-full w-full bg-zinc-950 rounded-[10px] flex items-center justify-center">
-              <Radio className="h-5 w-5 text-rose-400 animate-pulse" />
-            </div>
+          <div className="relative h-11 w-11 rounded-xl overflow-hidden shadow-lg shadow-rose-500/20 ring-1 ring-zinc-700/80 bg-zinc-900 group shrink-0">
+            <img
+              src="/logo.jpg"
+              alt="CreatorOps Hub Logo"
+              className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">
