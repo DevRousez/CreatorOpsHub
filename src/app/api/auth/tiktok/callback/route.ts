@@ -14,13 +14,21 @@ export async function GET(req: Request) {
   }
 
   try {
+    const cookieHeader = req.headers.get('cookie') || '';
+    const getCookie = (name: string): string => {
+      const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+      return match ? decodeURIComponent(match[1]) : '';
+    };
+    const cookieKey = getCookie('creatorops_tt_key');
+    const cookieSecret = getCookie('creatorops_tt_secret');
+
     const settings = getAppSettings();
-    const clientKey = settings.tiktok?.clientKey || process.env.TIKTOK_CLIENT_KEY;
-    const clientSecret = settings.tiktok?.clientSecret || process.env.TIKTOK_CLIENT_SECRET;
+    const clientKey = cookieKey || settings.tiktok?.clientKey || process.env.TIKTOK_CLIENT_KEY || 'awo7pvamgk3831x0';
+    const clientSecret = cookieSecret || settings.tiktok?.clientSecret || process.env.TIKTOK_CLIENT_SECRET;
 
     if (!clientKey || !clientSecret) {
       console.error('Faltan credenciales de TikTok Client Key / Secret');
-      return NextResponse.redirect(new URL('/?error=missing_credentials', req.url));
+      return NextResponse.redirect(new URL('/?error=missing_credentials_or_secret', req.url));
     }
 
     const host = req.headers.get('host') || url.host;

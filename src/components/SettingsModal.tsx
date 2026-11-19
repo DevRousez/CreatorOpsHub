@@ -261,6 +261,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  // Conexión rápida OAuth de TikTok (envía las credenciales actuales para asegurar el canje del token)
+  const [connectingTikTok, setConnectingTikTok] = useState(false);
+
+  const handleConnectTikTok = async () => {
+    setConnectingTikTok(true);
+    try {
+      const res = await fetch('/api/auth/tiktok/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientKey: tiktokClientKey || 'awo7pvamgk3831x0',
+          clientSecret: tiktokClientSecret,
+        }),
+      });
+      const data = await res.json();
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+        return;
+      }
+    } catch {}
+    window.location.href = `/api/auth/tiktok/login?client_key=${encodeURIComponent(tiktokClientKey || 'awo7pvamgk3831x0')}`;
+  };
+
   // Auto-detectar canal de YouTube (usa la clave del sistema o extracción pública sin que el usuario configure nada)
   const handleDetectYouTubeChannel = async () => {
     if (!accountForm.channelId && !accountForm.handle) {
@@ -640,14 +663,16 @@ CREATE TABLE IF NOT EXISTS content_items (
                         </button>
                       )}
                       
-                      <a
-                        href="/api/auth/tiktok/login"
-                        className="px-3.5 py-2 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 hover:text-white border border-cyan-700/60 font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                      <button
+                        type="button"
+                        onClick={handleConnectTikTok}
+                        disabled={connectingTikTok}
+                        className="px-3.5 py-2 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 hover:text-white border border-cyan-700/60 font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
                         title="Inicia sesión con TikTok para vincular una nueva cuenta con sus estadísticas y videos automáticamente"
                       >
-                        <TikTokIcon className="h-4 w-4 text-cyan-400" />
+                        {connectingTikTok ? <RefreshCw className="h-4 w-4 animate-spin" /> : <TikTokIcon className="h-4 w-4 text-cyan-400" />}
                         <span>+ Conectar TikTok (1-Clic)</span>
-                      </a>
+                      </button>
 
                       <button
                         onClick={handleStartAddAccount}
@@ -870,13 +895,15 @@ CREATE TABLE IF NOT EXISTS content_items (
                             ¿Quieres que se descarguen solos su foto, nombre, estadísticas y videos? Conecta esta cuenta con 1 clic.
                           </p>
                         </div>
-                        <a
-                          href="/api/auth/tiktok/login"
-                          className="shrink-0 px-3 py-1.5 rounded-lg bg-black hover:bg-zinc-900 border border-zinc-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                        <button
+                          type="button"
+                          onClick={handleConnectTikTok}
+                          disabled={connectingTikTok}
+                          className="shrink-0 px-3 py-1.5 rounded-lg bg-black hover:bg-zinc-900 border border-zinc-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                         >
-                          <TikTokIcon className="h-3.5 w-3.5 text-cyan-400" />
+                          {connectingTikTok ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <TikTokIcon className="h-3.5 w-3.5 text-cyan-400" />}
                           <span>Iniciar Sesión</span>
-                        </a>
+                        </button>
                       </div>
                     </div>
                   )}
@@ -1087,13 +1114,15 @@ CREATE TABLE IF NOT EXISTS content_items (
                       Inicia sesión con tu cuenta de TikTok para autorizar y sincronizar tus estadísticas y videos sin configurar tokens manualmente.
                     </p>
                   </div>
-                  <a
-                    href="/api/auth/tiktok/login"
-                    className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-black hover:bg-zinc-900 text-white font-bold text-xs border border-zinc-700 shadow-lg shadow-black/60 hover:border-cyan-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={handleConnectTikTok}
+                    disabled={connectingTikTok}
+                    className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-black hover:bg-zinc-900 text-white font-bold text-xs border border-zinc-700 shadow-lg shadow-black/60 hover:border-cyan-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
                   >
-                    <TikTokIcon className="h-4 w-4 text-cyan-400" />
+                    {connectingTikTok ? <RefreshCw className="h-4 w-4 animate-spin" /> : <TikTokIcon className="h-4 w-4 text-cyan-400" />}
                     <span>Conectar con TikTok</span>
-                  </a>
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

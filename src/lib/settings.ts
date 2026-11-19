@@ -85,7 +85,7 @@ export function getAppSettings(): AppSettings {
     },
     tiktok: {
       monitoredHandles: process.env.TIKTOK_MONITORED_HANDLES || 'mundoanitoonia,pequemundotoon5',
-      clientKey: process.env.TIKTOK_CLIENT_KEY || '',
+      clientKey: process.env.TIKTOK_CLIENT_KEY || 'awo7pvamgk3831x0',
       clientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
       accessToken: '',
     },
