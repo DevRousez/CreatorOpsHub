@@ -20,6 +20,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - **Tests con node --test nativo:** Pruebas unitarias de cálculo de métricas y fechas sin sobrecargar dependencias de testing.
 
 ## Aprendizajes y errores a evitar
+- Reglas de Hooks en React: nunca llamar a `useState` o hooks después de un `if (!isOpen) return null;`; todos los hooks deben ejecutarse incondicionalmente en la parte superior del componente.
 - En Vercel Serverless (read-only filesystem `EROFS`): no depender de escritura directa en `data/settings.json`; usar memoria de proceso, `/tmp` y `localStorage` en cliente para persistencia de credenciales sin lanzar errores en UI.
 - Nunca usar `toISOString()` para agrupar días de analítica local; usar fechas de calendario en zona horaria del usuario.
 - En Windows / Turbopack: no importar archivos de servidor que usen `fs` desde componentes `'use client'`.
