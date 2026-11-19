@@ -3,6 +3,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 
 ## Estado actual
 - Desplegado y verificado en Vercel: `https://creator-ops-hub-xi.vercel.app/`
+- YouTube con auto-detección Zero-Friction: el usuario solo pega el @handle o enlace y el backend auto-completa nombre, foto, suscriptores y videos sin pedir API Key.
 - Botón "+ Conectar TikTok (1-Clic)" integrado en pestaña "1. Canales y Cuentas" con soporte multi-cuenta y tokens individuales por cuenta (`acc.accessToken`).
 - Flujo OAuth2 activo (`/api/auth/tiktok/login` y `/api/auth/tiktok/callback`).
 - Activación/desactivación de cuentas con switch Toggle sin borrarlas, enfocando el dashboard y las gráficas en canales activos.
