@@ -3,12 +3,13 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 
 ## Estado actual
 - Desplegado y verificado en Vercel: `https://creator-ops-hub-xi.vercel.app/`
-- v1.2 con SDD: Panel completo de TikTok for Developers (Client Key, Secret, Access Token con prueba de conexión).
+- Flujo OAuth2 "Conectar con TikTok" de 1-clic activo (`/api/auth/tiktok/login` y `/api/auth/tiktok/callback`).
 - Activación/desactivación de cuentas con switch Toggle sin borrarlas, enfocando el dashboard y las gráficas en canales activos.
 - Logo oficial en alta resolución (`/logo.jpg`), favicon y páginas de conformidad legal (`/terms` y `/privacy`).
 - 6/6 tests unitarios en verde (`node --test tests/metrics.test.js`) y tipado estricto sin errores.
 
 ## Decisiones (y por qué)
+- **Modo Dev con Webpack:** En `package.json` se configuró `"dev": "next dev --webpack"` y `turbopack: {}` en `next.config.ts`, solucionando el conflicto de Next.js 16 entre Turbopack y la configuración personalizada de Webpack en Windows.
 - **Tailwind v4 PostCSS en producción:** Se configuró `@tailwindcss/postcss` con `postcss.config.mjs` y `--webpack` para compilar de forma robusta e idéntica en local y en Vercel.
 - **Separación Client/Server en settings:** Los módulos con Node `fs` residen exclusivamente en `/api/*` y `src/lib/server-data.ts`. `data-provider.ts` en cliente consulta `/api/dashboard` vía HTTP y en `next.config.ts` se añadió fallback de `fs: false` para el cliente.
 - **SDD Spec-Anchored:** Las specs viven en `specs/` (`spec.md`, `plan.md`, `tasks.md`) y guían la evolución del código para evitar desincronizaciones entre intención y código.
