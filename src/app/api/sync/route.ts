@@ -168,8 +168,8 @@ export async function POST() {
 
           await seedHistoricalMetricsIfNeeded(sbClient, savedTT.id, tt.subscribers || 100, tt.views24h || 80);
 
-          // Si el usuario proporcionó un Access Token de TikTok, consultar la lista de videos real
-          const ttAccessToken = settings.tiktok.accessToken || process.env.TIKTOK_ACCESS_TOKEN;
+          // Si esta cuenta o el sistema tiene un Access Token de TikTok, consultar la lista de videos real
+          const ttAccessToken = (tt as any).accessToken || settings.tiktok.accessToken || process.env.TIKTOK_ACCESS_TOKEN;
           if (ttAccessToken) {
             try {
               const ttVideosUrl = 'https://open.tiktokapis.com/v2/video/list/?fields=id,title,video_description,duration,cover_image_url,share_url,view_count,like_count,comment_count,share_count';

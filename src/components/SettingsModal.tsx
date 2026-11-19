@@ -623,7 +623,7 @@ CREATE TABLE IF NOT EXISTS content_items (
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
                       {activeAccountsCount < accounts.length && (
                         <button
                           type="button"
@@ -633,12 +633,22 @@ CREATE TABLE IF NOT EXISTS content_items (
                           Activar todas
                         </button>
                       )}
+                      
+                      <a
+                        href="/api/auth/tiktok/login"
+                        className="px-3.5 py-2 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 hover:text-white border border-cyan-700/60 font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                        title="Inicia sesión con TikTok para vincular una nueva cuenta con sus estadísticas y videos automáticamente"
+                      >
+                        <TikTokIcon className="h-4 w-4 text-cyan-400" />
+                        <span>+ Conectar TikTok (1-Clic)</span>
+                      </a>
+
                       <button
                         onClick={handleStartAddAccount}
                         className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold flex items-center gap-1.5 shadow-md shadow-rose-950/40 transition-all cursor-pointer"
                       >
                         <Plus className="h-4 w-4" />
-                        <span>Agregar Canal / Cuenta</span>
+                        <span>Agregar Manual</span>
                       </button>
                     </div>
                   </div>
@@ -822,6 +832,30 @@ CREATE TABLE IF NOT EXISTS content_items (
                           {detectMsg}
                         </p>
                       )}
+                    </div>
+                  )}
+
+                  {/* Si es TikTok: opción de Login OAuth directo */}
+                  {accountForm.platform === 'tiktok' && (
+                    <div className="p-3 bg-cyan-950/30 rounded-xl border border-cyan-800/40 space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="font-semibold text-white flex items-center gap-1.5 text-xs">
+                            <TikTokIcon className="h-4 w-4 text-cyan-400" />
+                            <span>Vincular cuenta con Login Oficial de TikTok</span>
+                          </span>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">
+                            ¿Quieres que se descarguen solos su foto, nombre, estadísticas y videos? Conecta esta cuenta con 1 clic.
+                          </p>
+                        </div>
+                        <a
+                          href="/api/auth/tiktok/login"
+                          className="shrink-0 px-3 py-1.5 rounded-lg bg-black hover:bg-zinc-900 border border-zinc-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <TikTokIcon className="h-3.5 w-3.5 text-cyan-400" />
+                          <span>Iniciar Sesión</span>
+                        </a>
+                      </div>
                     </div>
                   )}
 

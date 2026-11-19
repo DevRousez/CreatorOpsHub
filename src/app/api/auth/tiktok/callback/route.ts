@@ -82,7 +82,7 @@ export async function GET(req: Request) {
 
     const updatedAccounts = hasAccount
       ? existingAccounts.map(a => (a.platform === 'tiktok' && (a.channelId === openId || a.handle.toLowerCase() === creatorHandle.toLowerCase()))
-          ? { ...a, name: creatorName, handle: creatorHandle, avatarUrl: creatorAvatar || a.avatarUrl, enabled: true }
+          ? { ...a, name: creatorName, handle: creatorHandle, avatarUrl: creatorAvatar || a.avatarUrl, enabled: true, accessToken }
           : a
         )
       : [
@@ -93,10 +93,11 @@ export async function GET(req: Request) {
             name: creatorName,
             handle: creatorHandle,
             channelId: openId || `tt_${Date.now()}`,
-            badge: 'OAuth Verificado',
+            badge: 'TikTok OAuth',
             color: '#06B6D4',
             avatarUrl: creatorAvatar,
             enabled: true,
+            accessToken,
             subscribers: 0,
             subscribersChange24h: 1,
             totalViews: 0,

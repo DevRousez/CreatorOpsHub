@@ -8,6 +8,7 @@ export interface ConfigAccount {
   color: string;
   avatarUrl?: string;
   enabled?: boolean; // Permite activar o desactivar la cuenta sin borrarla
+  accessToken?: string; // Token OAuth individual para sincronización multicuenta
   subscribers?: number;
   subscribersChange24h?: number;
   totalViews?: number;
