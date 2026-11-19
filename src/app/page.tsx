@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [syncTimestamp, setSyncTimestamp] = useState<string>('Hace unos momentos');
+  const [authBanner, setAuthBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Cargar datos
   const loadData = async (mock?: boolean) => {
@@ -30,6 +31,23 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tiktok_connected') === 'true') {
+        setAuthBanner({
+          type: 'success',
+          message: '🎉 ¡Cuenta de TikTok vinculada con éxito! Tus estadísticas y videos han sido sincronizados.',
+        });
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (params.get('error')) {
+        setAuthBanner({
+          type: 'error',
+          message: `Aviso de autorización TikTok: ${params.get('error')}`,
+        });
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
   }, []);
 
   // Alternar entre modo ficticio y real
@@ -88,6 +106,27 @@ export default function DashboardPage() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 space-y-6">
         
+        {/* Banner de Estado de Autenticación */}
+        {authBanner && (
+          <div
+            className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
+              authBanner.type === 'success'
+                ? 'bg-emerald-950/70 border-emerald-800 text-emerald-200 shadow-lg shadow-emerald-950/30'
+                : 'bg-amber-950/70 border-amber-800 text-amber-200'
+            }`}
+          >
+            <div className="flex items-center gap-2.5 text-xs font-medium">
+              <span>{authBanner.message}</span>
+            </div>
+            <button
+              onClick={() => setAuthBanner(null)}
+              className="text-xs px-2.5 py-1 rounded-lg bg-black/40 hover:bg-black/60 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
+
         {/* Banner Snapshot Matutino */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-950/40 via-zinc-900 to-zinc-900 border border-rose-900/40 p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">

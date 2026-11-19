@@ -1020,6 +1020,26 @@ CREATE TABLE IF NOT EXISTS content_items (
                   Cuando recibas aprobación en TikTok Developers, ingresa tus credenciales oficiales aquí para conectar directamente con Display API v2. Mientras tanto, puedes usar tus handles monitoreados.
                 </p>
 
+                {/* Botón de Conexión OAuth Oficial 1-Clic */}
+                <div className="p-3.5 bg-gradient-to-r from-cyan-950/40 via-zinc-950 to-zinc-900 rounded-xl border border-cyan-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-1.5 font-bold text-white text-xs">
+                      <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                      <span>Conexión con TikTok (Login Oficial 1-Clic)</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Inicia sesión con tu cuenta de TikTok para autorizar y sincronizar tus estadísticas y videos sin configurar tokens manualmente.
+                    </p>
+                  </div>
+                  <a
+                    href="/api/auth/tiktok/login"
+                    className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-black hover:bg-zinc-900 text-white font-bold text-xs border border-zinc-700 shadow-lg shadow-black/60 hover:border-cyan-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    <TikTokIcon className="h-4 w-4 text-cyan-400" />
+                    <span>Conectar con TikTok</span>
+                  </a>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-zinc-300 font-semibold mb-1">
