@@ -25,11 +25,24 @@ export async function getDashboardData(forceMock?: boolean): Promise<DashboardDa
   } catch (err) {
     console.warn('Fallo al consultar /api/dashboard, usando datos de respaldo:', err);
     return {
-      accounts: MOCK_ACCOUNTS,
-      overview: MOCK_OVERVIEW,
-      history: generateMockHistory(),
-      recentContent: MOCK_RECENT_CONTENT,
-      isMockData: true,
+      accounts: forceMock ? MOCK_ACCOUNTS : [],
+      overview: forceMock ? MOCK_OVERVIEW : {
+        totalAudience: 0,
+        audienceGrowth24h: 0,
+        totalViews24h: 0,
+        viewsGrowthPercent: 0,
+        avgEngagement: 0,
+        engagementTrend: 0,
+        topVideo24h: {
+          title: 'Sin datos disponibles',
+          views: 0,
+          accountName: '',
+          platform: 'youtube',
+        },
+      },
+      history: forceMock ? generateMockHistory() : [],
+      recentContent: forceMock ? MOCK_RECENT_CONTENT : [],
+      isMockData: Boolean(forceMock),
       supabaseReady: false,
     };
   }

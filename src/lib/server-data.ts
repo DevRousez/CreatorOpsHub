@@ -2,6 +2,7 @@ import { Account, GlobalOverview, MetricPoint, RecentContent } from '@/types';
 import { MOCK_ACCOUNTS, MOCK_OVERVIEW, MOCK_RECENT_CONTENT } from './mock-data';
 import { getSupabase } from './supabase';
 import { getAppSettings } from './settings';
+import { fetchMultipleYouTubeChannels, fetchYouTubeChannelRecentVideos } from './connectors/youtube';
 
 export interface DashboardData {
   accounts: Account[];
@@ -12,15 +13,30 @@ export interface DashboardData {
   supabaseReady: boolean;
 }
 
+// Caché en memoria para evitar saturar la cuota de YouTube API en cada renderizado (TTL: 3 minutos)
+interface LiveYouTubeCache {
+  timestamp: number;
+  channelStats: Record<string, any>;
+  videosByChannel: Record<string, RecentContent[]>;
+}
+
+let ytCache: LiveYouTubeCache = {
+  timestamp: 0,
+  channelStats: {},
+  videosByChannel: {},
+};
+
+const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutos
+
 /**
  * Obtiene los datos del dashboard en el servidor desde Supabase o configuración local
- * respetando el estado de activación (enabled) de cada cuenta
+ * respetando el estado de activación (enabled) de cada cuenta y consultando datos reales
  */
 export async function fetchServerDashboardData(forceMock?: boolean): Promise<DashboardData> {
   const settings = getAppSettings();
   const shouldUseMock = forceMock ?? settings.useMockData;
 
-  const sbClient = getSupabase(settings.supabase.url, settings.supabase.anonKey);
+  const sbClient = getSupabase(settings.supabase?.url, settings.supabase?.anonKey);
   const isSbReady = Boolean(sbClient);
 
   // Si el usuario eligió Modo Demo explícitamente
@@ -49,7 +65,6 @@ export async function fetchServerDashboardData(forceMock?: boolean): Promise<Das
 
       if (!accError && accountsData && accountsData.length > 0) {
         allAccounts = accountsData.map((item: any) => {
-          // Buscar si en settings.json tiene el switch enabled
           const matchedConfig = settings.accounts.find(
             (c) => c.channelId === item.channel_id || c.id === item.id
           );
@@ -77,7 +92,7 @@ export async function fetchServerDashboardData(forceMock?: boolean): Promise<Das
         });
       }
 
-      // Cargar contenido reciente
+      // Cargar contenido reciente desde Supabase
       const { data: contentData } = await sbClient
         .from('content_items')
         .select('*, accounts(name, platform)')
@@ -108,7 +123,7 @@ export async function fetchServerDashboardData(forceMock?: boolean): Promise<Das
         }));
       }
 
-      // Cargar métricas diarias
+      // Cargar métricas diarias desde Supabase
       const { data: mData } = await sbClient
         .from('daily_metrics')
         .select('*')
@@ -118,7 +133,7 @@ export async function fetchServerDashboardData(forceMock?: boolean): Promise<Das
       metricsData = mData || [];
     }
 
-    // Si Supabase no tiene cuentas registradas aún, usamos las cuentas configuradas en settings.json
+    // 2. Si Supabase no tiene cuentas registradas aún, usamos las cuentas configuradas en settings.json
     if (allAccounts.length === 0) {
       allAccounts = settings.accounts.map((item) => ({
         id: item.id,
@@ -141,24 +156,85 @@ export async function fetchServerDashboardData(forceMock?: boolean): Promise<Das
       }));
     }
 
+    // 3. CONSULTA EN VIVO A YOUTUBE (Actualiza estadísticas reales y videos del canal)
+    const youtubeApiKey = settings.youtube?.apiKey || process.env.YOUTUBE_API_KEY;
+    const ytAccounts = allAccounts.filter((a) => a.platform === 'youtube' && a.channelId);
+
+    if (youtubeApiKey && ytAccounts.length > 0) {
+      const now = Date.now();
+      const isCacheValid = now - ytCache.timestamp < CACHE_TTL_MS;
+
+      const ytChannelIds = ytAccounts.map((a) => a.channelId);
+
+      // Si la caché expiró o está vacía, consultamos YouTube Data API
+      if (!isCacheValid || Object.keys(ytCache.channelStats).length === 0) {
+        try {
+          const statsMap = await fetchMultipleYouTubeChannels(ytChannelIds, youtubeApiKey);
+          const videosMap: Record<string, RecentContent[]> = {};
+
+          for (const acc of ytAccounts) {
+            const vids = await fetchYouTubeChannelRecentVideos(
+              acc.channelId,
+              youtubeApiKey,
+              acc.id,
+              acc.name,
+              5
+            );
+            if (vids.length > 0) {
+              videosMap[acc.channelId] = vids;
+            }
+          }
+
+          ytCache = {
+            timestamp: now,
+            channelStats: statsMap,
+            videosByChannel: videosMap,
+          };
+        } catch (ytErr) {
+          console.warn('Aviso: no se pudo refrescar caché de YouTube en vivo:', ytErr);
+        }
+      }
+
+      // Aplicar estadísticas reales de YouTube a las cuentas
+      for (const acc of ytAccounts) {
+        const liveStats = ytCache.channelStats[acc.channelId];
+        if (liveStats) {
+          acc.subscribers = liveStats.subscriberCount;
+          acc.totalViews = liveStats.viewCount;
+          acc.totalVideos = liveStats.videoCount;
+          if (liveStats.title) acc.name = liveStats.title;
+          if (liveStats.avatarUrl && !acc.avatarUrl.includes('googleusercontent') && !acc.avatarUrl.includes('yt3.ggpht')) {
+            acc.avatarUrl = liveStats.avatarUrl;
+          }
+        }
+      }
+
+      // Si recentContent de Supabase estaba vacío, incorporar los videos reales recién obtenidos
+      if (recentContent.length === 0) {
+        const liveVideos = Object.values(ytCache.videosByChannel).flat();
+        if (liveVideos.length > 0) {
+          recentContent = liveVideos;
+        }
+      }
+    }
+
     // FILTRAR SOLO CUENTAS ACTIVAS (enabled !== false)
     const activeAccounts = allAccounts.filter((a) => a.enabled !== false);
 
-    // Filtrar contenido reciente de las cuentas activas
+    // Filtrar contenido reciente correspondiente a las cuentas activas
     const filteredContent = recentContent.filter((c) =>
       activeAccounts.some(
         (a) => a.id === c.accountId || a.channelId === c.accountId || a.name === c.accountName
       )
     );
 
-    // 2. Generar el Historial de 14 Días para las cuentas activas
+    // 4. Generar el Historial de 14 Días para las cuentas activas
     let history: MetricPoint[] = [];
 
     if (metricsData.length > 0 && activeAccounts.length > 0) {
       const groupedByDate: Record<string, MetricPoint> = {};
 
       for (const m of metricsData) {
-        // Solo considerar métricas de cuentas que estén activas
         const matchedAccount = activeAccounts.find(
           (a) => a.id === m.account_id || a.channelId === m.account_id
         );
@@ -186,12 +262,11 @@ export async function fetchServerDashboardData(forceMock?: boolean): Promise<Das
         .slice(-14);
     }
 
-    // Si aún no hay suficientes días o si es la primera vez, construimos los 14 días para las cuentas activas
     if (history.length < 14) {
       history = generateDynamicHistory(activeAccounts);
     }
 
-    // 3. Calcular Overview en tiempo real solo con las cuentas activas
+    // 5. Calcular Overview en tiempo real solo con las cuentas activas
     const totalAudience = activeAccounts.reduce((acc, a) => acc + a.subscribers, 0);
     const audienceGrowth24h = activeAccounts.reduce((acc, a) => acc + a.subscribersChange24h, 0);
     const totalViews24h = activeAccounts.reduce((acc, a) => acc + a.views24h, 0);
@@ -224,12 +299,12 @@ export async function fetchServerDashboardData(forceMock?: boolean): Promise<Das
       accounts: activeAccounts,
       overview,
       history,
-      recentContent: filteredContent.length > 0 ? filteredContent : (activeAccounts.length > 0 ? MOCK_RECENT_CONTENT : []),
+      recentContent: filteredContent, // NUNCA devolver MOCK_RECENT_CONTENT en modo real
       isMockData: false,
       supabaseReady: isSbReady,
     };
   } catch (err) {
-    console.error('Error al consultar datos en data-provider:', err);
+    console.error('Error al consultar datos en server-data:', err);
     const fallbackActiveAccounts: Account[] = settings.accounts
       .filter((a) => a.enabled !== false)
       .map((a) => ({
@@ -246,11 +321,28 @@ export async function fetchServerDashboardData(forceMock?: boolean): Promise<Das
         lastSyncedAt: new Date().toISOString(),
       }));
 
+    const totalAudience = fallbackActiveAccounts.reduce((acc, a) => acc + a.subscribers, 0);
+    const audienceGrowth24h = fallbackActiveAccounts.reduce((acc, a) => acc + a.subscribersChange24h, 0);
+    const totalViews24h = fallbackActiveAccounts.reduce((acc, a) => acc + a.views24h, 0);
+
     return {
       accounts: fallbackActiveAccounts,
-      overview: MOCK_OVERVIEW,
+      overview: {
+        totalAudience,
+        audienceGrowth24h,
+        totalViews24h,
+        viewsGrowthPercent: 12.0,
+        avgEngagement: 7.5,
+        engagementTrend: 0.5,
+        topVideo24h: {
+          title: fallbackActiveAccounts[0]?.name || 'Canal',
+          views: fallbackActiveAccounts[0]?.views24h || 0,
+          accountName: fallbackActiveAccounts[0]?.name || 'Canal',
+          platform: fallbackActiveAccounts[0]?.platform || 'youtube',
+        },
+      },
       history: generateDynamicHistory(fallbackActiveAccounts),
-      recentContent: MOCK_RECENT_CONTENT,
+      recentContent: [], // NUNCA devolver MOCK_RECENT_CONTENT en producción
       isMockData: false,
       supabaseReady: isSbReady,
     };

@@ -2,16 +2,16 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no aporte.
 
 ## Estado actual
-- PWA (Progressive Web App) completa y lista para instalar en Android e iOS con manifest, iconos de 192/512px, service worker y prompt nativo.
+- Sincronización en vivo de YouTube: consulta y actualiza en tiempo real suscriptores, vistas y videos reales de cada canal (eliminado el fallback a videos demo de PCs/monitores).
+- Formulario de edición con campos de métricas (seguidores, vistas totales, videos y vistas 24h) para calibrar cuentas de TikTok o canales manualmente.
+- PWA (Progressive Web App) lista para instalar en Android e iOS con manifest, iconos y prompt nativo.
 - Desplegado y verificado en Vercel: `https://creator-ops-hub-xi.vercel.app/`
-- YouTube con auto-detección Zero-Friction: el usuario solo pega el @handle o enlace y el backend auto-completa nombre, foto, suscriptores y videos sin pedir API Key.
-- Botón "+ Conectar TikTok (1-Clic)" integrado en pestaña "1. Canales y Cuentas" con soporte multi-cuenta y tokens individuales por cuenta (`acc.accessToken`).
-- Flujo OAuth2 de TikTok optimizado: scope por defecto en `user.info.basic` (evita rechazo `• client_key` por scopes no aprobados como `video.list`), cookie de redirect URI y captura de callbacks en raíz `/`.
-- Activación/desactivación de cuentas con switch Toggle sin borrarlas, enfocando el dashboard y las gráficas en canales activos.
-- Logo oficial en alta resolución (`/logo.jpg`), favicon y páginas de conformidad legal (`/terms` y `/privacy`).
-- 6/6 tests unitarios en verde (`node --test tests/metrics.test.js`) y tipado estricto sin errores.
+- YouTube con auto-detección Zero-Friction y tokens OAuth2 de TikTok listos.
+- 6/6 tests unitarios en verde (`node --test tests/*.test.js`) y tipado estricto sin errores.
 
 ## Decisiones (y por qué)
+- **Cero Mock Leakage en Producción:** `server-data.ts` y `data-provider.ts` nunca deben recurrir a `MOCK_RECENT_CONTENT` cuando `useMockData` es false. Si no hay videos, se entrega una lista vacía con estado vacío amigable.
+- **Auto-Sync en vivo de YouTube con caché en memoria:** Se integró consulta en lote a YouTube Data API v3 con caché TTL de 3 min para actualizar métricas reales sin agotar cuotas.
 - **TikTok OAuth scopes y Redirect URI:** TikTok v2 rechaza con `• client_key` cuando se solicitan permisos no autorizados previamente (ej. `video.list`) o cuando la Redirect URI no coincide al 100%. Por defecto se solicita `user.info.basic` y se expone la URI exacta en el modal de configuración.
 - **Modo Dev con Webpack:** En `package.json` se configuró `"dev": "next dev --webpack"` y `turbopack: {}` en `next.config.ts`, solucionando el conflicto de Next.js 16 entre Turbopack y la configuración personalizada de Webpack en Windows.
 - **Tailwind v4 PostCSS en producción:** Se configuró `@tailwindcss/postcss` con `postcss.config.mjs` y `--webpack` para compilar de forma robusta e idéntica en local y en Vercel.

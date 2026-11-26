@@ -972,6 +972,74 @@ CREATE TABLE IF NOT EXISTS content_items (
                     </div>
                   </div>
 
+                  {/* Métricas manuales / sincronizadas del canal */}
+                  <div className="p-3 bg-zinc-950/80 rounded-xl border border-zinc-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-300">
+                        Métricas del Canal / Cuenta
+                      </span>
+                      <span className="text-[11px] text-zinc-400">
+                        {accountForm.platform === 'youtube'
+                          ? 'Se actualizan automáticamente con YouTube API o puedes ajustarlas aquí'
+                          : 'Ajusta tus seguidores y métricas reales de TikTok'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] text-zinc-400 font-semibold mb-1">
+                          {accountForm.platform === 'youtube' ? 'Suscriptores' : 'Seguidores'}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={accountForm.subscribers}
+                          onChange={(e) => setAccountForm((p) => ({ ...p, subscribers: parseInt(e.target.value, 10) || 0 }))}
+                          className="w-full px-2.5 py-1.5 bg-black border border-zinc-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] text-zinc-400 font-semibold mb-1">
+                          Vistas Totales
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={accountForm.totalViews ?? 0}
+                          onChange={(e) => setAccountForm((p) => ({ ...p, totalViews: parseInt(e.target.value, 10) || 0 }))}
+                          className="w-full px-2.5 py-1.5 bg-black border border-zinc-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] text-zinc-400 font-semibold mb-1">
+                          Videos Totales
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={accountForm.totalVideos ?? 0}
+                          onChange={(e) => setAccountForm((p) => ({ ...p, totalVideos: parseInt(e.target.value, 10) || 0 }))}
+                          className="w-full px-2.5 py-1.5 bg-black border border-zinc-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] text-zinc-400 font-semibold mb-1">
+                          Vistas Últimas 24h
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={accountForm.views24h}
+                          onChange={(e) => setAccountForm((p) => ({ ...p, views24h: parseInt(e.target.value, 10) || 0 }))}
+                          className="w-full px-2.5 py-1.5 bg-black border border-zinc-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Switch para activar/desactivar directamente en el formulario */}
                   <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
                     <div>
