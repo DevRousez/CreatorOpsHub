@@ -81,7 +81,7 @@ export function getAppSettings(): AppSettings {
       anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_usmNFzrYinLKfyh9mnwN6Q_I8uw9MXG',
     },
     youtube: {
-      apiKey: process.env.YOUTUBE_API_KEY || 'AIzaSyCwICBOXCuykW6RKHnXwbjknye-25WyEj0',
+      apiKey: process.env.YOUTUBE_API_KEY || '',
     },
     tiktok: {
       monitoredHandles: process.env.TIKTOK_MONITORED_HANDLES || 'mundoanitoonia,pequemundotoon5',
