@@ -142,8 +142,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setTiktokClientKey(s.tiktok?.clientKey || localBackup?.tiktok?.clientKey || '');
         setTiktokClientSecret(s.tiktok?.clientSecret || localBackup?.tiktok?.clientSecret || '');
         setTiktokAccessToken(s.tiktok?.accessToken || localBackup?.tiktok?.accessToken || '');
+        const accountsToLoad = Array.isArray(s.accounts) && s.accounts.length > 0
+          ? s.accounts
+          : (Array.isArray(localBackup?.accounts) ? localBackup.accounts : []);
         setAccounts(
-          (s.accounts || localBackup?.accounts || []).map((acc: any) => ({
+          accountsToLoad.map((acc: any) => ({
             ...acc,
             enabled: acc.enabled !== false,
           }))
